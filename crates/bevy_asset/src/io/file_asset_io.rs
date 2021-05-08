@@ -7,6 +7,7 @@ use fs::File;
 use io::Read;
 use parking_lot::RwLock;
 use std::{
+    convert::TryFrom,
     env, fs, io,
     path::{Path, PathBuf},
     sync::Arc,
@@ -101,13 +102,16 @@ impl AssetIo for FileAssetIo {
 
     fn get_metadata(&self, path: &Path) -> Result<Metadata, AssetIoError> {
         let full_path = self.root_path.join(path);
-        full_path.metadata().map(Metadata::from).map_err(|e| {
-            if e.kind() == std::io::ErrorKind::NotFound {
-                AssetIoError::NotFound(full_path)
-            } else {
-                e.into()
-            }
-        })
+        full_path
+            .metadata()
+            .and_then(Metadata::try_from)
+            .map_err(|e| {
+                if e.kind() == std::io::ErrorKind::NotFound {
+                    AssetIoError::NotFound(full_path)
+                } else {
+                    e.into()
+                }
+            })
     }
 }
 
