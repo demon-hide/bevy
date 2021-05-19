@@ -20,6 +20,8 @@ pub enum ShaderStage {
     Compute,
 }
 
+use shaderc;
+
 /// An error that occurs during shader handling.
 #[derive(Error, Debug)]
 pub enum ShaderError {
@@ -61,7 +63,7 @@ pub enum ShaderError {
     #[error("Error initializing shaderc CompileOptions")]
     ErrorInitializingShadercCompileOptions,
 }
-
+/* 
 #[cfg(any(
     all(target_arch = "x86_64", target_os = "linux", target_env = "gnu"),
     all(target_arch = "x86_64", target_os = "macos"),
@@ -77,7 +79,18 @@ impl From<ShaderStage> for bevy_glsl_to_spirv::ShaderType {
             ShaderStage::Compute => bevy_glsl_to_spirv::ShaderType::Compute,
         }
     }
+}*/
+
+impl From<ShaderStage> for shaderc::ShaderKind {
+    fn from(s: ShaderStage) -> shaderc::ShaderKind {
+        match s {
+            ShaderStage::Vertex => shaderc::ShaderKind::Vertex,
+            ShaderStage::Fragment => shaderc::ShaderKind::Fragment,
+            ShaderStage::Compute => shaderc::ShaderKind::Compute,
+        }
+    }
 }
+
 
 #[cfg(any(
     all(target_arch = "x86_64", target_os = "linux", target_env = "gnu"),
@@ -91,8 +104,27 @@ pub fn glsl_to_spirv(
     stage: ShaderStage,
     shader_defs: Option<&[String]>,
 ) -> Result<Vec<u32>, ShaderError> {
-    bevy_glsl_to_spirv::compile(glsl_source, stage.into(), shader_defs)
-        .map_err(ShaderError::Compilation)
+    let mut glsl_compiler = shaderc::Compiler::new().unwrap();
+    let mut options = shaderc::CompileOptions::new().unwrap();
+
+
+    /*
+    options.set_include_callback(|f, _, _, _| match headers.get(f) {
+        Some(s) => {
+            Ok(shaderc::ResolvedInclude { resolved_name: f.to_string(), content: s.clone() })
+        }
+        None => Err("not found".to_string()),
+    });
+    for (m, value) in defines {
+        options.add_macro_definition(m, Some(value));
+    } */
+
+    Ok(glsl_compiler
+        .compile_into_spirv(glsl_source, stage.into(), "dummy.glsl", "main", Some(&options))
+        .expect("unable to compile").as_binary()
+        .to_vec())
+    //bevy_glsl_to_spirv::compile(glsl_source, stage.into(), shader_defs)
+    //    .map_err(ShaderError::Compilation)
 }
 
 #[cfg(not(any(

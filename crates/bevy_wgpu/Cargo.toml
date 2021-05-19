@@ -29,8 +29,16 @@ bevy_winit = { path = "../bevy_winit", optional = true, version = "0.5.0" }
 bevy_utils = { path = "../bevy_utils", version = "0.5.0" }
 
 # other
-wgpu = "0.8"
+wgpu = "0.8.0"
 futures-lite = "1.4.0"
 crossbeam-channel = "0.5.0"
 crossbeam-utils = "0.8.1"
 parking_lot = "0.11.0"
+
+# by Ahmed for terra
+bevy_terra = { path = "../../../terra" }
+cgmath = { version = "0.18.0", features = ["mint", "serde"] }
+structopt = "0.3.21"
+tokio = { version = "1.0.0", features = ["fs", "macros", "sync", "rt", "rt-multi-thread", "io-util"] }
+indicatif = "0.15.0"
+mint = "0.5.6"

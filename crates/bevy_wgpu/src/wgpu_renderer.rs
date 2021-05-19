@@ -10,7 +10,11 @@ use bevy_render::{
     renderer::RenderResourceContext,
 };
 use bevy_window::{WindowCreated, WindowResized, Windows};
-use std::{ops::Deref, sync::Arc};
+use std::{ops::Deref, sync::Arc, sync::Mutex};
+pub mod terra;
+//Ahmed
+//use bevy_terra;
+//use terra;
 
 pub struct WgpuRenderer {
     pub instance: wgpu::Instance,
@@ -19,6 +23,7 @@ pub struct WgpuRenderer {
     pub window_resized_event_reader: ManualEventReader<WindowResized>,
     pub window_created_event_reader: ManualEventReader<WindowCreated>,
     pub initialized: bool,
+    terrain: Arc<Mutex<bevy_terra::Terrain>>
 }
 
 impl WgpuRenderer {
@@ -34,6 +39,9 @@ impl WgpuRenderer {
         };
         let instance = wgpu::Instance::new(backend);
 
+    
+       
+            
         let adapter = instance
             .request_adapter(&wgpu::RequestAdapterOptions {
                 power_preference: match options.power_pref {
@@ -45,6 +53,10 @@ impl WgpuRenderer {
             })
             .await
             .expect("Unable to find a GPU! Make sure you have installed required drivers!");
+
+        let features = wgpu::Features::TEXTURE_COMPRESSION_BC | wgpu::Features::SHADER_FLOAT64;
+
+
 
         #[cfg(feature = "trace")]
         let trace_path = {
@@ -60,7 +72,7 @@ impl WgpuRenderer {
             .request_device(
                 &wgpu::DeviceDescriptor {
                     label: options.device_label.as_ref().map(|a| a.as_ref()),
-                    features: options.features.wgpu_into(),
+                    features: features,//options.features.wgpu_into(),
                     limits: options.limits.wgpu_into(),
                 },
                 trace_path,
@@ -68,14 +80,18 @@ impl WgpuRenderer {
             .await
             .unwrap();
         let device = Arc::new(device);
+        let terrain = Arc::new(Mutex::new(terra::terra_main(device.clone(), &queue)));
         WgpuRenderer {
             instance,
-            device,
+            device: device.clone(),
             queue,
             window_resized_event_reader: Default::default(),
             window_created_event_reader: Default::default(),
             initialized: false,
+            terrain
         }
+
+
     }
 
     pub fn handle_window_created_events(&mut self, world: &mut World) {
@@ -124,6 +140,9 @@ impl WgpuRenderer {
 
     pub fn update(&mut self, world: &mut World) {
         self.handle_window_created_events(world);
+
+
+
         self.run_graph(world);
 
         let render_resource_context = world
